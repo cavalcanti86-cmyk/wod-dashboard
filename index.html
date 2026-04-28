@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WOD — Dashboard de Performance 2026</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:      #0f172a;
+      --surface: #1e293b;
+      --card:    #ffffff;
+      --border:  #334155;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --indigo:  #6366f1;
+      --emerald: #10b981;
+      --amber:   #f59e0b;
+      --rose:    #f43f5e;
+      --sky:     #0ea5e9;
+      --violet:  #8b5cf6;
+      --gap:     16px;
+      --radius:  12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ─── HEADER ──────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #312e81 100%);
+      padding: 28px 40px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 1px solid rgba(99,102,241,.3);
+    }
+    .header-eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: #a5b4fc;
+      margin-bottom: 4px;
+    }
+    .header-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .header-sub { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+    .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-live {
+      background: rgba(16,185,129,.15);
+      border: 1px solid rgba(16,185,129,.4);
+      color: #6ee7b7;
+    }
+    .badge-info {
+      background: rgba(99,102,241,.15);
+      border: 1px solid rgba(99,102,241,.3);
+      color: #a5b4fc;
+    }
+    .dot {
+      width: 7px; height: 7px;
+      background: #10b981;
+      border-radius: 50%;
+      animation: blink 2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ─── MAIN ────────────────────────────────────── */
+    .main { max-width: 1480px; margin: 0 auto; padding: 28px 40px 56px; }
+
+    /* ─── KPI ─────────────────────────────────────── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--gap);
+      margin-bottom: 24px;
+    }
+    .kpi {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 18px 20px 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.07);
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--stripe, #6366f1);
+    }
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .kpi-note { font-size: 11px; color: var(--muted); line-height: 1.4; }
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 99px;
+      font-size: 10px; font-weight: 700; margin-top: 6px;
+    }
+    .tag-g { background:#dcfce7; color:#166534; }
+    .tag-r { background:#fee2e2; color:#b91c1c; }
+    .tag-b { background:#dbeafe; color:#1d4ed8; }
+    .tag-y { background:#fef3c7; color:#92400e; }
+
+    /* ─── SECTION ─────────────────────────────────── */
+    .section {
+      display: flex; align-items: center; gap: 10px;
+      margin: 28px 0 14px;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: #64748b;
+    }
+    .section::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.08); }
+
+    /* ─── CHART GRID ──────────────────────────────── */
+    .grid { display: grid; gap: var(--gap); margin-bottom: 16px; }
+    .col1 { grid-template-columns: 1fr; }
+    .col2 { grid-template-columns: 1fr 1fr; }
+    .col21 { grid-template-columns: 2fr 1fr; }
+    .col12 { grid-template-columns: 1fr 2fr; }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px 22px 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.07);
+    }
+    .card-head {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; margin-bottom: 16px; gap: 8px;
+      flex-wrap: wrap;
+    }
+    .card-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .card-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .ch    { position: relative; height: 260px; }
+    .ch-sm { position: relative; height: 220px; }
+    .ch-lg { position: relative; height: 320px; }
+
+    /* ─── LEGEND ──────────────────────────────────── */
+    .leg {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      font-size: 11px; color: var(--muted);
+    }
+    .leg span { display: flex; align-items: center; gap: 5px; }
+    .legdot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+    .legline { width:14px; height:2px; border-radius:1px; display:inline-block; }
+
+    /* ─── ALERT ───────────────────────────────────── */
+    .alert {
+      background: linear-gradient(90deg, rgba(244,63,94,.1), rgba(244,63,94,.03));
+      border: 1px solid rgba(244,63,94,.25);
+      border-left: 3px solid #f43f5e;
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin-bottom: 24px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: #e2e8f0;
+    }
+    .alert strong { color: #fda4af; }
+    .alert-icon { font-size: 20px; flex-shrink:0; }
+
+    /* ─── INSIGHTS ────────────────────────────────── */
+    .insights { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--gap); margin-bottom: 24px; }
+    .ins {
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      border: 1px solid;
+    }
+    .ins-g { background:#f0fdf4; border-color:#bbf7d0; }
+    .ins-y { background:#fffbeb; border-color:#fde68a; }
+    .ins-r { background:#fff1f2; border-color:#fecdd3; }
+    .ins-icon  { font-size: 22px; margin-bottom: 8px; }
+    .ins-title { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+    .ins-body  { font-size: 12px; color: #64748b; line-height: 1.6; }
+    .ins-g .ins-title { color: #166534; }
+    .ins-y .ins-title { color: #92400e; }
+    .ins-r .ins-title { color: #9f1239; }
+
+    /* ─── TABLE ───────────────────────────────────── */
+    .tbl-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 2px 8px rgba(0,0,0,.07);
+      overflow: hidden;
+    }
+    .tbl-head {
+      padding: 16px 22px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .tbl-wrap { overflow-x: auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    thead th {
+      padding: 10px 14px;
+      text-align: right;
+      background: #f8fafc;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .7px;
+      color: var(--muted);
+      white-space: nowrap;
+      cursor: pointer; user-select: none;
+    }
+    thead th:first-child { text-align: left; }
+    thead th:hover { background:#f1f5f9; color:var(--text); }
+    tbody tr { border-bottom: 1px solid #f8fafc; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody tr.row-bad  { background: #fff1f2; }
+    tbody tr.row-warn { background: #fffbeb; }
+    tbody tr.row-part { background: #eff6ff; }
+    tbody td { padding: 10px 14px; text-align: right; white-space: nowrap; }
+    tbody td:first-child { text-align: left; font-weight: 600; }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px; border-radius: 99px;
+      font-size: 11px; font-weight: 700;
+    }
+    .pg { background:#dcfce7; color:#15803d; }
+    .pb { background:#dbeafe; color:#1d4ed8; }
+    .py { background:#fef3c7; color:#92400e; }
+    .pr { background:#fee2e2; color:#b91c1c; }
+    .pn { background:#f1f5f9; color:#475569; }
+
+    /* ─── FOOTER ──────────────────────────────────── */
+    .footer {
+      text-align: center; font-size: 11px; color: #475569;
+      padding-top: 16px; border-top: 1px solid rgba(255,255,255,.06);
+      margin-top: 8px;
+    }
+
+    /* ─── RESPONSIVE ──────────────────────────────── */
+    @media (max-width: 1100px) {
+      .kpi-row { grid-template-columns: repeat(3,1fr); }
+      .col2, .col21, .col12 { grid-template-columns: 1fr; }
+      .insights { grid-template-columns: 1fr; }
+      .main { padding: 20px; }
+      .header { padding: 20px; }
+    }
+    @media (max-width: 640px) {
+      .kpi-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ HEADER ════════════════════════════════════ -->
+<div class="header">
+  <div>
+    <div class="header-eyebrow">Aliança Divergente · Adriane · Funil WOD</div>
+    <div class="header-title">Webinário O Destrave</div>
+    <div class="header-sub">Dashboard de Performance · Semanas S40–S52 · Janeiro–Abril 2026</div>
+  </div>
+  <div class="header-right">
+    <div class="badge badge-live"><span class="dot"></span> Atualizado 28/04/2026</div>
+    <div class="badge badge-info">13 edições analisadas</div>
+  </div>
+</div>
+
+<!-- ═══════════ MAIN ══════════════════════════════════════ -->
+<div class="main">
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi" style="--stripe:#6366f1">
+      <div class="kpi-label">Total Vendas · S40–S52</div>
+      <div class="kpi-value">469</div>
+      <div class="kpi-note">Todas as edições · dados CRM</div>
+    </div>
+    <div class="kpi" style="--stripe:#10b981">
+      <div class="kpi-label">Melhor Conv Ficha→Venda</div>
+      <div class="kpi-value">17,6%</div>
+      <div class="kpi-note">S47 · 42 vendas / 239 fichas</div>
+      <div class="tag tag-g">▲ Benchmark</div>
+    </div>
+    <div class="kpi" style="--stripe:#6366f1">
+      <div class="kpi-label">Zona Saudável (S43–S50)</div>
+      <div class="kpi-value">14–17%</div>
+      <div class="kpi-note">Conv ficha em 195–250 fichas/sem</div>
+      <div class="tag tag-b">Referência histórica</div>
+    </div>
+    <div class="kpi" style="--stripe:#f43f5e">
+      <div class="kpi-label">S51 — Queda crítica</div>
+      <div class="kpi-value">7,0%</div>
+      <div class="kpi-note">531 fichas · só 37 vendas · −7,8pp</div>
+      <div class="tag tag-r">▼ Pior desde ramp-up</div>
+    </div>
+    <div class="kpi" style="--stripe:#f59e0b">
+      <div class="kpi-label">S52 — Evento hoje ✱</div>
+      <div class="kpi-value">9,4%</div>
+      <div class="kpi-note">672 fichas · 63 vendas · parcial</div>
+      <div class="tag tag-y">Em andamento</div>
+    </div>
+  </div>
+
+  <!-- ALERT -->
+  <div class="alert">
+    <span class="alert-icon">⚠️</span>
+    <div>
+      <strong>Gargalo S51 identificado:</strong> com 531 fichas (2,6× a média histórica), o comercial precisou de <strong>14,4 fichas por venda</strong> — mesmo índice da S41 (ramp-up, 14,9×). 218 dos 241 leads P1+P2 foram perdidos sem conversão (90,5%). S52 mostra recuperação parcial (10,7×).
+    </div>
+  </div>
+
+  <!-- ─── SEÇÃO 1: Visão geral ───────────────────── -->
+  <div class="section">📊 Visão Geral · Volume & Conversão</div>
+  <div class="grid col1">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Fichas por Semana vs Conv Ficha → Venda</div>
+          <div class="card-sub">Barras = volume de fichas CRM · Linha laranja = taxa de conversão · Vermelho = semanas críticas</div>
+        </div>
+        <div class="leg">
+          <span><span class="legdot" style="background:#6366f1"></span>Fichas (normal)</span>
+          <span><span class="legdot" style="background:#f59e0b"></span>Fichas (atenção &gt;250)</span>
+          <span><span class="legdot" style="background:#f43f5e"></span>Fichas (crítico S51/S52)</span>
+          <span><span class="legline" style="background:#f59e0b"></span>Conv%</span>
+        </div>
+      </div>
+      <div class="ch-lg"><canvas id="c-overview"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ─── SEÇÃO 2: LSC ──────────────────────────── -->
+  <div class="section">🎯 Leadscore Comercial · Profundidade</div>
+  <div class="grid col2">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Conv Ficha→Venda por LSC · Todas as Semanas</div>
+          <div class="card-sub">P1 e P2 devem andar juntos — quando divergem, é sinal de sobrecarga</div>
+        </div>
+      </div>
+      <div class="ch"><canvas id="c-lsc-lines"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Gap P1 − P2 (diferença de conversão)</div>
+          <div class="card-sub">Acima de 8pp = comercial priorizando P1 e abandonando P2</div>
+        </div>
+      </div>
+      <div class="ch"><canvas id="c-gap"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid col2">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Distribuição % de Fichas por Leadscore</div>
+          <div class="card-sub">Participação de P1–P5 dentro de cada semana</div>
+        </div>
+      </div>
+      <div class="ch"><canvas id="c-lsc-dist"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Fichas por Venda · Índice de Capacidade</div>
+          <div class="card-sub">Verde ≤7× (saudável) · Amarelo 7–10× · Vermelho &gt;10× (sobrecarga)</div>
+        </div>
+      </div>
+      <div class="ch"><canvas id="c-fpv"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ─── SEÇÃO 3: P1+P2 ──────────────────────── -->
+  <div class="section">🔴 Fichas Premium P1+P2 · Aproveitamento</div>
+  <div class="grid col2">
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">P1+P2 — Convertidos vs Perdidos</div>
+          <div class="card-sub">Os leads mais qualificados do funil — em S51, 90,5% foram desperdiçados</div>
+        </div>
+      </div>
+      <div class="ch"><canvas id="c-p12-stack"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">% de P1+P2 Perdidos · Série Histórica</div>
+          <div class="card-sub">Linha tracejada = limite aceitável 85% · Acima = alerta comercial</div>
+        </div>
+      </div>
+      <div class="ch"><canvas id="c-p12-pct"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ─── INSIGHTS ─────────────────────────────── -->
+  <div class="section">💡 Diagnóstico</div>
+  <div class="insights">
+    <div class="ins ins-g">
+      <div class="ins-icon">✅</div>
+      <div class="ins-title">Zona de ouro: 195–250 fichas/semana</div>
+      <div class="ins-body">Em S43–S50 (exceto S46), com fichas nessa faixa, a conversão ficou consistentemente entre 14–17,6%. O time fecha ~1 a cada 6,5 fichas. É a capacidade ótima do comercial atual.</div>
+    </div>
+    <div class="ins ins-y">
+      <div class="ins-icon">⚡</div>
+      <div class="ins-title">P2 é o termômetro de sobrecarga</div>
+      <div class="ins-body">Quando P2 ≈ P1 (gap &lt;5pp), o funil está saudável. Na S46 o gap chegou a +12pp e em S51 a +7pp — o sinal aparece no P2 <em>antes</em> de aparecer na planilha de Conv Lista→Venda. Monitore P2 toda semana.</div>
+    </div>
+    <div class="ins ins-r">
+      <div class="ins-icon">🚨</div>
+      <div class="ins-title">Volume sem capacidade = pior do que não crescer</div>
+      <div class="ins-body">Em S51, a lista triplicou e as fichas também. Mas o comercial não absorveu: precisou de 14,4 fichas/venda (vs 6,5 nas semanas boas). Foram 218 leads P1+P2 perdidos — provavelmente &gt;R$200k em receita deixada na mesa.</div>
+    </div>
+  </div>
+
+  <!-- ─── TABLE ─────────────────────────────────── -->
+  <div class="section">📋 Tabela Detalhada · S40–S52</div>
+  <div class="tbl-card">
+    <div class="tbl-head">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#1e293b;">Histórico Completo por Semana</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px;">Clique no cabeçalho para ordenar &nbsp;·&nbsp; <span style="color:#b91c1c;">■</span> S51 = crítico &nbsp;·&nbsp; <span style="color:#1d4ed8;">■</span> S52 = parcial</div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="srt(0)">Semana ↕</th>
+            <th onclick="srt(1)">Fichas</th>
+            <th onclick="srt(2)">Vendas</th>
+            <th onclick="srt(3)">Conv Ficha%</th>
+            <th onclick="srt(4)">Fichas/Venda</th>
+            <th onclick="srt(5)">P1 qtd</th>
+            <th onclick="srt(6)">P1 conv%</th>
+            <th onclick="srt(7)">P2 qtd</th>
+            <th onclick="srt(8)">P2 conv%</th>
+            <th onclick="srt(9)">Gap P1-P2</th>
+            <th onclick="srt(10)">P1+P2 tot</th>
+            <th onclick="srt(11)">P1+P2 perd%</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    Fonte: HubSpot CRM Export · 28/04/2026 &nbsp;·&nbsp; ✱ S52 parcial — evento ainda em andamento hoje &nbsp;·&nbsp; Aliança Divergente – WOD – Adriane
+  </div>
+</div>
+
+<!-- ═══════════ SCRIPTS ═══════════════════════════════════ -->
+<script>
+// ──────────────────────────────────────────────────
+// DADOS
+// ──────────────────────────────────────────────────
+const RAW = [
+  {s:'S40',dt:'03/fev',f:113,v:12,p1f:18,p1v:4, p2f:24,p2v:4, p3f:28,p3v:3, p4f:19,p4v:0, p5f:24,p5v:1},
+  {s:'S41',dt:'10/fev',f:119,v:8, p1f:16,p1v:1, p2f:20,p2v:2, p3f:34,p3v:2, p4f:35,p4v:1, p5f:14,p5v:2},
+  {s:'S42',dt:'17/fev',f:155,v:13,p1f:25,p1v:5, p2f:29,p2v:3, p3f:48,p3v:3, p4f:39,p4v:1, p5f:14,p5v:1},
+  {s:'S43',dt:'24/fev',f:215,v:35,p1f:31,p1v:7, p2f:54,p2v:12,p3f:51,p3v:10,p4f:58,p4v:5, p5f:21,p5v:1},
+  {s:'S44',dt:'03/mar',f:231,v:39,p1f:43,p1v:11,p2f:47,p2v:10,p3f:64,p3v:11,p4f:57,p4v:5, p5f:20,p5v:2},
+  {s:'S45',dt:'10/mar',f:272,v:38,p1f:48,p1v:11,p2f:63,p2v:8, p3f:75,p3v:11,p4f:60,p4v:7, p5f:26,p5v:1},
+  {s:'S46',dt:'17/mar',f:281,v:28,p1f:57,p1v:12,p2f:76,p2v:7, p3f:65,p3v:8, p4f:57,p4v:1, p5f:26,p5v:0},
+  {s:'S47',dt:'24/mar',f:239,v:42,p1f:59,p1v:15,p2f:62,p2v:9, p3f:59,p3v:9, p4f:45,p4v:8, p5f:14,p5v:1},
+  {s:'S48',dt:'31/mar',f:208,v:31,p1f:51,p1v:9, p2f:47,p2v:7, p3f:45,p3v:4, p4f:46,p4v:7, p5f:19,p5v:4},
+  {s:'S49',dt:'07/abr',f:195,v:30,p1f:47,p1v:9, p2f:45,p2v:9, p3f:49,p3v:6, p4f:39,p4v:5, p5f:15,p5v:1},
+  {s:'S50',dt:'14/abr',f:203,v:30,p1f:63,p1v:8, p2f:37,p2v:6, p3f:43,p3v:9, p4f:43,p4v:4, p5f:17,p5v:3},
+  {s:'S51',dt:'21/abr',f:531,v:37,p1f:124,p1v:16,p2f:117,p2v:7,p3f:139,p3v:7,p4f:105,p4v:6,p5f:46,p5v:1,crit:true},
+  {s:'S52',dt:'28/abr',f:672,v:63,p1f:153,p1v:26,p2f:130,p2v:14,p3f:165,p3v:13,p4f:164,p4v:9,p5f:60,p5v:1,part:true},
+];
+
+RAW.forEach(w => {
+  w.conv   = +(w.v/w.f*100).toFixed(1);
+  w.fpv    = +(w.f/w.v).toFixed(1);
+  w.p1c    = +(w.p1v/w.p1f*100).toFixed(1);
+  w.p2c    = +(w.p2v/w.p2f*100).toFixed(1);
+  w.p3c    = w.p3f ? +(w.p3v/w.p3f*100).toFixed(1) : 0;
+  w.p4c    = w.p4f ? +(w.p4v/w.p4f*100).toFixed(1) : 0;
+  w.p5c    = w.p5f ? +(w.p5v/w.p5f*100).toFixed(1) : 0;
+  w.gap    = +(w.p1c - w.p2c).toFixed(1);
+  w.p12t   = w.p1f + w.p2f;
+  w.p12v   = w.p1v + w.p2v;
+  w.p12p   = w.p12t - w.p12v;
+  w.p12pct = +(w.p12p/w.p12t*100).toFixed(1);
+  w.p1pct  = +(w.p1f/w.f*100).toFixed(1);
+  w.p2pct  = +(w.p2f/w.f*100).toFixed(1);
+  w.p3pct  = +(w.p3f/w.f*100).toFixed(1);
+  w.p4pct  = +(w.p4f/w.f*100).toFixed(1);
+  w.p5pct  = +(w.p5f/w.f*100).toFixed(1);
+});
+
+const LB = RAW.map(w => w.s);
+
+// ──────────────────────────────────────────────────
+// CHART DEFAULTS
+// ──────────────────────────────────────────────────
+Chart.defaults.font.family = "-apple-system, 'Segoe UI', Roboto, sans-serif";
+Chart.defaults.color = '#64748b';
+
+const C = {
+  indigo:'#6366f1', emerald:'#10b981', amber:'#f59e0b',
+  rose:'#f43f5e', sky:'#0ea5e9', violet:'#8b5cf6',
+  teal:'#14b8a6', orange:'#f97316', pink:'#ec4899',
+};
+
+function hex(c,a){ return c+Math.round(a*255).toString(16).padStart(2,'0'); }
+
+// ──────────────────────────────────────────────────
+// C1 — Overview: Fichas (bar) + Conv% (line)
+// ──────────────────────────────────────────────────
+new Chart(document.getElementById('c-overview'),{
+  type:'bar',
+  data:{
+    labels: LB,
+    datasets:[
+      {
+        label:'Fichas',
+        data: RAW.map(w=>w.f),
+        backgroundColor: RAW.map(w=>
+          w.crit ? hex(C.rose,.55) :
+          w.part ? hex(C.sky,.5) :
+          w.f>250 ? hex(C.amber,.55) : hex(C.indigo,.55)
+        ),
+        borderColor: RAW.map(w=>
+          w.crit ? C.rose : w.part ? C.sky :
+          w.f>250 ? C.amber : C.indigo
+        ),
+        borderWidth:1.5,
+        borderRadius:5,
+        yAxisID:'yF',
+        order:2,
+      },
+      {
+        label:'Conv Ficha→Venda (%)',
+        data: RAW.map(w=>w.conv),
+        type:'line',
+        borderColor: C.amber,
+        backgroundColor:'transparent',
+        borderWidth:2.5,
+        pointRadius: RAW.map(w=> w.crit||w.part ? 7 : 4),
+        pointBackgroundColor: RAW.map(w=>
+          w.conv<10 ? C.rose : w.conv<13 ? C.amber : C.emerald
+        ),
+        pointBorderColor:'#fff',
+        pointBorderWidth:1.5,
+        tension:.35,
+        fill:false,
+        yAxisID:'yC',
+        order:1,
+      }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{position:'top',labels:{usePointStyle:true,padding:18,font:{size:12}}},
+      tooltip:{
+        callbacks:{
+          label: ctx => ctx.datasetIndex===0
+            ? `Fichas: ${ctx.parsed.y}`
+            : `Conv: ${ctx.parsed.y}%`,
+          afterBody: items=>{
+            const w = RAW[items[0].dataIndex];
+            const lines = [`Vendas: ${w.v}`, `Fichas/Venda: ${w.fpv}×`];
+            if(w.crit) lines.push('⚠ Sobrecarga crítica');
+            if(w.part) lines.push('✱ Evento em andamento');
+            return lines;
+          }
+        }
+      }
+    },
+    scales:{
+      yF:{
+        position:'left', beginAtZero:true,
+        title:{display:true,text:'Fichas',font:{size:11},color:'#94a3b8'},
+        ticks:{color:'#94a3b8',font:{size:11}},
+        grid:{color:'rgba(100,116,139,.1)'}
+      },
+      yC:{
+        position:'right', beginAtZero:true, max:22,
+        title:{display:true,text:'Conv (%)',font:{size:11},color:C.amber},
+        ticks:{callback:v=>v+'%',color:C.amber,font:{size:11}},
+        grid:{display:false}
+      },
+      x:{grid:{display:false},ticks:{color:'#64748b',font:{size:11}}}
+    }
+  }
+});
+
+// ──────────────────────────────────────────────────
+// C2 — Conv por LSC todas as semanas
+// ──────────────────────────────────────────────────
+new Chart(document.getElementById('c-lsc-lines'),{
+  type:'line',
+  data:{
+    labels:LB,
+    datasets:[
+      {label:'P1',data:RAW.map(w=>w.p1c),borderColor:C.emerald,backgroundColor:'transparent',borderWidth:2.5,pointRadius:4,tension:.3},
+      {label:'P2',data:RAW.map(w=>w.p2c),borderColor:C.sky,    backgroundColor:'transparent',borderWidth:2.5,pointRadius:4,tension:.3},
+      {label:'P3',data:RAW.map(w=>w.p3c),borderColor:C.violet, backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,tension:.3},
+      {label:'P4',data:RAW.map(w=>w.p4c),borderColor:C.amber,  backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,tension:.3},
+      {label:'P5',data:RAW.map(w=>w.p5c),borderColor:C.rose,   backgroundColor:'transparent',borderWidth:1.5,pointRadius:2,tension:.3},
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{position:'top',labels:{usePointStyle:true,padding:12,font:{size:11}}},
+      tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}%`}}
+    },
+    scales:{
+      y:{beginAtZero:true,max:30,ticks:{callback:v=>v+'%',font:{size:11}},grid:{color:'rgba(100,116,139,.1)'}},
+      x:{grid:{display:false},ticks:{color:'#64748b',font:{size:11}}}
+    }
+  }
+});
+
+// ──────────────────────────────────────────────────
+// C3 — Gap P1−P2
+// ──────────────────────────────────────────────────
+new Chart(document.getElementById('c-gap'),{
+  type:'bar',
+  data:{
+    labels:LB,
+    datasets:[{
+      label:'Gap P1−P2 (pp)',
+      data: RAW.map(w=>w.gap),
+      backgroundColor: RAW.map(w=>
+        w.gap>10 ? hex(C.rose,.7) :
+        w.gap>5  ? hex(C.amber,.7) : hex(C.emerald,.6)
+      ),
+      borderColor: RAW.map(w=>
+        w.gap>10 ? C.rose : w.gap>5 ? C.amber : C.emerald
+      ),
+      borderWidth:1.5, borderRadius:5,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{
+        label:ctx=>`Gap: ${ctx.parsed.y>0?'+':''}${ctx.parsed.y}pp`,
+        afterLabel:ctx=>{
+          const v=ctx.parsed.y;
+          if(v>10) return '🔴 P2 sendo abandonado';
+          if(v>5)  return '🟡 Atenção ao P2';
+          return '🟢 P1 e P2 equilibrados';
+        }
+      }}
+    },
+    scales:{
+      y:{ticks:{callback:v=>(v>0?'+':'')+v+'pp',font:{size:11}},grid:{color:'rgba(100,116,139,.1)'}},
+      x:{grid:{display:false},ticks:{color:'#64748b',font:{size:11}}}
+    }
+  }
+});
+
+// ──────────────────────────────────────────────────
+// C4 — Distribuição LSC stacked
+// ──────────────────────────────────────────────────
+new Chart(document.getElementById('c-lsc-dist'),{
+  type:'bar',
+  data:{
+    labels:LB,
+    datasets:[
+      {label:'P1',data:RAW.map(w=>w.p1pct),backgroundColor:'rgba(16,185,129,.8)' },
+      {label:'P2',data:RAW.map(w=>w.p2pct),backgroundColor:'rgba(14,165,233,.8)' },
+      {label:'P3',data:RAW.map(w=>w.p3pct),backgroundColor:'rgba(139,92,246,.8)' },
+      {label:'P4',data:RAW.map(w=>w.p4pct),backgroundColor:'rgba(245,158,11,.8)'  },
+      {label:'P5',data:RAW.map(w=>w.p5pct),backgroundColor:'rgba(244,63,94,.8)',
+       borderRadius:{topLeft:4,topRight:4} },
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'top',labels:{usePointStyle:true,padding:12,font:{size:11}}},
+      tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}%`}}
+    },
+    scales:{
+      x:{stacked:true,grid:{display:false},ticks:{color:'#64748b',font:{size:11}}},
+      y:{stacked:true,max:100,ticks:{callback:v=>v+'%',font:{size:11}},grid:{color:'rgba(100,116,139,.1)'}}
+    }
+  }
+});
+
+// ──────────────────────────────────────────────────
+// C5 — Fichas por Venda
+// ──────────────────────────────────────────────────
+new Chart(document.getElementById('c-fpv'),{
+  type:'bar',
+  data:{
+    labels:LB,
+    datasets:[
+      {
+        label:'Fichas por Venda',
+        data:RAW.map(w=>w.fpv),
+        backgroundColor:RAW.map(w=>
+          w.fpv>12 ? hex(C.rose,.7) :
+          w.fpv>8  ? hex(C.amber,.7) : hex(C.emerald,.65)
+        ),
+        borderColor:RAW.map(w=>
+          w.fpv>12 ? C.rose : w.fpv>8 ? C.amber : C.emerald
+        ),
+        borderWidth:1.5, borderRadius:5,
+      },
+      {
+        label:'Limite saudável (7×)',
+        data:RAW.map(()=>7),
+        type:'line',
+        borderColor:C.emerald,
+        backgroundColor:'transparent',
+        borderWidth:1.5, borderDash:[5,4],
+        pointRadius:0, tension:0,
+      },
+      {
+        label:'Sobrecarga (12×)',
+        data:RAW.map(()=>12),
+        type:'line',
+        borderColor:C.rose,
+        backgroundColor:'transparent',
+        borderWidth:1.5, borderDash:[5,4],
+        pointRadius:0, tension:0,
+      }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'top',labels:{usePointStyle:true,padding:12,font:{size:11}}},
+      tooltip:{callbacks:{
+        label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}×`,
+        afterLabel:ctx=>{
+          const v=ctx.parsed.y;
+          if(v>12) return '🔴 Sobrecarga crítica';
+          if(v>8)  return '🟡 Acima do ideal';
+          return '🟢 Zona saudável';
+        }
+      }}
+    },
+    scales:{
+      y:{beginAtZero:true,ticks:{callback:v=>v+'×',font:{size:11}},grid:{color:'rgba(100,116,139,.1)'}},
+      x:{grid:{display:false},ticks:{color:'#64748b',font:{size:11}}}
+    }
+  }
+});
+
+// ──────────────────────────────────────────────────
+// C6 — P1+P2 convertidos vs perdidos
+// ──────────────────────────────────────────────────
+new Chart(document.getElementById('c-p12-stack'),{
+  type:'bar',
+  data:{
+    labels:LB,
+    datasets:[
+      {label:'Convertidos',data:RAW.map(w=>w.p12v),backgroundColor:'rgba(16,185,129,.75)',borderRadius:0},
+      {label:'Perdidos',   data:RAW.map(w=>w.p12p),backgroundColor:'rgba(244,63,94,.55)',
+       borderRadius:{topLeft:4,topRight:4}},
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{
+      legend:{position:'top',labels:{usePointStyle:true,padding:14,font:{size:11}}},
+      tooltip:{callbacks:{
+        label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}`,
+        afterBody:items=>{
+          const w=RAW[items[0].dataIndex];
+          return [`Conv P1+P2: ${+(w.p12v/w.p12t*100).toFixed(1)}%`, `Total P1+P2: ${w.p12t} fichas`];
+        }
+      }}
+    },
+    scales:{
+      x:{stacked:true,grid:{display:false},ticks:{color:'#64748b',font:{size:11}}},
+      y:{stacked:true,ticks:{font:{size:11}},grid:{color:'rgba(100,116,139,.1)'}}
+    }
+  }
+});
+
+// ──────────────────────────────────────────────────
+// C7 — % P1+P2 perdidos
+// ──────────────────────────────────────────────────
+new Chart(document.getElementById('c-p12-pct'),{
+  type:'bar',
+  data:{
+    labels:LB,
+    datasets:[
+      {
+        label:'% P1+P2 Perdidos',
+        data:RAW.map(w=>w.p12pct),
+        backgroundColor:RAW.map(w=>w.p12pct>88?hex(C.rose,.7):hex(C.violet,.6)),
+        borderColor:RAW.map(w=>w.p12pct>88?C.rose:C.violet),
+        borderWidth:1.5, borderRadius:5,
+      },
+      {
+        label:'Limite 85%',
+        data:RAW.map(()=>85),
+        type:'line',
+        borderColor:C.rose,
+        backgroundColor:'transparent',
+        borderWidth:1.5, borderDash:[6,4], pointRadius:0, tension:0,
+      }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'top',labels:{usePointStyle:true,padding:14,font:{size:11}}},
+      tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${ctx.parsed.y}%`}}
+    },
+    scales:{
+      y:{min:65,max:100,ticks:{callback:v=>v+'%',font:{size:11}},grid:{color:'rgba(100,116,139,.1)'}},
+      x:{grid:{display:false},ticks:{color:'#64748b',font:{size:11}}}
+    }
+  }
+});
+
+// ──────────────────────────────────────────────────
+// TABLE
+// ──────────────────────────────────────────────────
+function cpill(v){
+  if(v>=15) return `<span class="pill pg">${v}%</span>`;
+  if(v>=10) return `<span class="pill pb">${v}%</span>`;
+  if(v>=7)  return `<span class="pill py">${v}%</span>`;
+  return `<span class="pill pr">${v}%</span>`;
+}
+function fpill(v){
+  if(v<=7)  return `<span class="pill pg">${v}×</span>`;
+  if(v<=10) return `<span class="pill py">${v}×</span>`;
+  return `<span class="pill pr">${v}×</span>`;
+}
+function ppill(v){
+  if(v>88) return `<span class="pill pr">${v}%</span>`;
+  if(v>83) return `<span class="pill py">${v}%</span>`;
+  return `<span class="pill pg">${v}%</span>`;
+}
+function gpill(v){
+  const s=v>=0?'+':'';
+  if(v>10) return `<span class="pill pr">${s}${v}pp</span>`;
+  if(v>5)  return `<span class="pill py">${s}${v}pp</span>`;
+  return `<span class="pill pg">${s}${v}pp</span>`;
+}
+
+let sortDir=-1, sortKey='s';
+const KEYS=['s','f','v','conv','fpv','p1f','p1c','p2f','p2c','gap','p12t','p12pct'];
+let tableData=[...RAW];
+
+function renderTable(){
+  document.getElementById('tbody').innerHTML = tableData.map(w=>{
+    const cls = w.crit ? ' class="row-bad"' : w.part ? ' class="row-part"' : '';
+    const lbl = w.s + (w.part?' ✱':'') + (w.crit?' ⚠':'');
+    return `<tr${cls}>
+      <td>${lbl}</td>
+      <td>${w.f.toLocaleString('pt-BR')}</td>
+      <td>${w.v}</td>
+      <td>${cpill(w.conv)}</td>
+      <td>${fpill(w.fpv)}</td>
+      <td>${w.p1f}</td>
+      <td>${cpill(w.p1c)}</td>
+      <td>${w.p2f}</td>
+      <td>${cpill(w.p2c)}</td>
+      <td>${gpill(w.gap)}</td>
+      <td>${w.p12t}</td>
+      <td>${ppill(w.p12pct)}</td>
+    </tr>`;
+  }).join('');
+}
+
+window.srt = function(i){
+  const k=KEYS[i];
+  if(sortKey===k) sortDir*=-1; else {sortKey=k;sortDir=-1;}
+  tableData.sort((a,b)=>(a[k]<b[k]?-1:a[k]>b[k]?1:0)*sortDir);
+  renderTable();
+};
+
+renderTable();
+</script>
+</body>
+</html>
